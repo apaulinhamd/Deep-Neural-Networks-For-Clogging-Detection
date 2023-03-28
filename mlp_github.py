@@ -22,6 +22,14 @@ from pandas import concat
 from pandas import DataFrame
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+    from sklearn.metrics import classification_report
+    from sklearn.metrics import roc_auc_score
+    from sklearn.metrics import confusion_matrix
+    from sklearn.metrics import mean_absolute_error 
+    import math 
+    from sklearn.metrics import precision_recall_curve
+    from sklearn.metrics import auc
+
 
 
 # convert series to supervised learning
@@ -137,14 +145,6 @@ def evaluate_model(X_train, y_train, X_valid, y_valid, X_test, y_test):
 
     
     
-    from sklearn.metrics import classification_report
-    from sklearn.metrics import roc_auc_score
-    from sklearn.metrics import confusion_matrix
-    from sklearn.metrics import mean_absolute_error 
-    import math 
-    from sklearn.metrics import precision_recall_curve
-    from sklearn.metrics import auc
-
     target_names = ['Non-Clogging', 'Clogging']
     print(classification_report(y_test[:,0], y_pred[:,0], target_names=target_names))
         

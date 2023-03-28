@@ -33,7 +33,7 @@ from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import auc
 
 
-# convert series to supervised learning
+# function responsible for generating the 4x120 input matrix
 def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
 	n_vars = 1 if type(data) is list else data.shape[1]
 	df = DataFrame(data)
@@ -63,19 +63,19 @@ X = df.values
 X = X.astype('float32')
 del df
 
-# Time Matrix X_4x120
-delay = 120
+# Time Matrix X_4x120 (the first 4 variables of the data set were used.)
+delay = 120 # Time Matrix X_4x120 (the first 4 variables of the data set were used.)
 Xt = series_to_supervised(X[:,:4], (delay-1), 1)
 Xt = Xt.values
 
-# output
+# formation of the output variable
 yt = X[(delay-1):,4:]
 
-# features and classes
+# define number of features and classes
 n_features = X[:,:4].shape[1]
 n_classes = 1
 
-# concatenate data
+# concatenate data (input + output)
 X = np.concatenate([Xt,yt],axis=1)
 
 # Separate majority and minority classes
@@ -85,6 +85,7 @@ X_minority = X[yt[:,0]==1]
 del X
 
 # selects 80% of data matrices for training set
+# necessary to split for each class of data in order to keep the proportion of the training data set at 50% for each class (data balancing)
 X_tr_0, X_tst_0, y_tr_0, y_tst_0 = train_test_split(X_majority,X_majority[:,0],
                                                     test_size=0.2,  random_state = 59418, shuffle=True) # 59418: this number was used as a multiplier of "r" to generate our seed.
 del y_tr_0, y_tst_0 
@@ -94,28 +95,30 @@ X_tr_1, X_tst_1, y_tr_1, y_tst_1 = train_test_split(X_minority,X_minority[:,0],
 del y_tr_1, y_tst_1 
 
  
-# Upsample minority class: To keep the training set data balanced
+# Undersampling majoritory class: To keep the training set data balanced
 X_tr_0 = resample(X_tr_0,
              replace=False,     # sample without replacement
              n_samples=X_tr_1.shape[0],       # to match minority class
              random_state=594178) # reproducible results
 
+# concatenate the input dataset
 X_train = np.concatenate([X_tr_0, X_tr_1])
+
+# mixes normal operation and clogging data
 np.random.shuffle(X_train)
 
-# TRAINING DATA SET
+# TRAINING DATASET: defines input and output of training dataset
 y_train = X_train[:,delay*n_features:]
 X_train = X_train[:,:delay*n_features]
     
 
-# Total samples for tst and validation will be: N_tst_val
+# Total samples for test and validation will be: N_tst_val (corresponding to 80% of the total training set data)
 N_tr = X_train.shape[0]
 N_tst_val = int(N_tr*100/80 - N_tr)
 
 
 # KEEP VALIDATION AND TEST SET IN THE ORIGINAL PROPORTION
-
-# resample of validation and test sets
+# resample of validation and test sets (maintaining the original proportion of the distribution of classes (unbalanced set))
 X_tst_0 = resample(X_tst_0,
              replace=False,    
              n_samples=int(N_tst_val*0.93), 
@@ -126,7 +129,7 @@ X_tst_1 = resample(X_tst_1,
              n_samples=int(N_tst_val*0.07), 
              random_state=594178)
 
-
+# half of this set will revert to testing and the other half to validation. This division is made for each class.
 X_tst_0, X_val_0, y_tst_0, y_val_0 = train_test_split(X_tst_0,X_tst_0[:,0],
                                                     test_size=0.5, random_state = 59418, shuffle=True)
 del y_tst_0, y_val_0
@@ -136,13 +139,15 @@ X_tst_1, X_val_1, y_tst_1, y_val_1 = train_test_split(X_tst_1,X_tst_1[:,0],
 del y_tst_1, y_val_1 
 
 
-
+# concatenate the validation and test dataset
 X_valid = np.concatenate([X_val_0, X_val_1])
 X_test = np.concatenate([X_tst_0, X_tst_1])    
 
+# mixes normal operation and clogging data
 np.random.shuffle(X_valid)
 np.random.shuffle(X_test)
 
+# defines input and output of validation and test datasets
 y_valid = X_valid[:,delay*n_features:]
 X_valid = X_valid[:,:delay*n_features]
     
@@ -156,27 +161,34 @@ del X_val_0, X_val_1
     
 
 # Z-SCORE
-
 norm_zscore = StandardScaler()
-
 X_train = norm_zscore.fit_transform(X_train)
 X_valid = norm_zscore.transform(X_valid)
 X_test = norm_zscore.transform(X_test)
 
+# adjustment of the initial formation of the input matrices 
 X_train = X_train.reshape(X_train.shape[0], delay, n_features)
 X_valid = X_valid.reshape(X_valid.shape[0], delay, n_features)
 X_test = X_test.reshape(X_test.shape[0], delay, n_features)
     
 
 # classification before heuristic
-verbose, epochs, batch_size = 1, 200, 1200
-n_features, n_outputs = X_train.shape[2], y_train.shape[1]
-n_steps, n_length = 4,30
 
+# training parameters
+verbose, epochs, batch_size = 1, 200, 1200
+
+# from the data collects the number of input variables (i.e., 4) and output size.
+n_features, n_outputs = X_train.shape[2], y_train.shape[1]
+
+# reshape into subsequences (samples, time steps, rows, cols, channels)
+n_steps, n_length = 4,30#selected after analyzing the process for adjusting the model data input (tensor formation)
+    
+# reshape training, validation, and testing sets
 X_train = X_train.reshape((X_train.shape[0], n_steps, 1, n_length, n_features))
 X_valid = X_valid.reshape((X_valid.shape[0], n_steps, 1, n_length, n_features))
 X_test = X_test.reshape((X_test.shape[0], n_steps, 1, n_length, n_features))
 
+# loss and metrics
 my_loss = tf.keras.losses.CategoricalCrossentropy()
 my_metric1 = tf.keras.metrics.CategoricalAccuracy()
 my_metric2 = tf.keras.metrics.AUC()
@@ -199,6 +211,7 @@ model.summary()
 # fit network
 callback = tf.keras.callbacks.EarlyStopping(min_delta=0.0005, patience=6)
 
+# training time calculation
 import time
 start = time.clock() 
 history = model.fit(X_train, y_train, validation_data=(X_valid, y_valid), 
@@ -217,6 +230,7 @@ plt.plot(history.history['val_loss'], label='Validation')
 plt.legend()
 plt.show()
 
+# predict:
 y_pred = np.zeros(y_test.shape)
 start = time.clock()
 id_pred = model.predict_classes(X_test,verbose=verbose)
@@ -226,6 +240,7 @@ y_pred[id_pred==0,0]=1
 time2test = end-start
 
 
+# analysis of the results by calculating the confusion matrix and defined performance criteria.
 target_names = ['Non-Clogging', 'Clogging']
 print(classification_report(y_test[:,0], y_pred[:,0], target_names=target_names))
     
@@ -248,7 +263,7 @@ mae_test = mean_absolute_error(y_test[:,0], y_pred[:,0])
 
 epochs_test = len(history.history['loss'])
     
-    
+# summarize scores
 print('Accuracy \t  \t \t \t \t %.3f%%' % (accuracy_test*100.0))  
 print('Precision \t \t \t \t \t %.3f%%' % (precision_test*100.0))
 print('Recall \t \t \t \t \t \t %.3f%%' % (recall_test*100.0))
@@ -262,13 +277,14 @@ print('Epochs \t \t \t \t \t \t %.3f' % (epochs_test))
       
 
 # heuristic
-window = 40
-windowing = list(range(0,len(X_test), window))
+window = 40 # sets the size of the evaluation window
+windowing = list(range(0,len(X_test), window)) #
 
 y_before_heuristic = y_pred
 y_pOS_heuristic = np.zeros(y_pred.shape)
 
 
+#s et the max and min limit values
 threshold_min = 0.3
 threshold_max = 0.8
 
@@ -302,6 +318,7 @@ for i in windowing:
                  y_pOS_heuristic[i:i+window ,1]=1   
         
 
+# analysis of the results calculated by the confusion matrix after applying the heuristic
 AUC_test_pOS_heur = roc_auc_score(y_test[:,0], y_pOS_heuristic[:,0])
 
 tn_pOS, fp_pOS, fn_pOS, tp_pOS = confusion_matrix(y_test[:,0], y_pOS_heuristic[:,0]).ravel()
@@ -313,7 +330,7 @@ MCC_test_pOS_heur = ((tp_pOS*tn_pOS)-(fp_pOS*fn_pOS))/(math.sqrt((tp_pOS+fp_pOS)
 
 mae_test_pOS_heur = mean_absolute_error(y_test[:,0], y_pOS_heuristic[:,0])
 
-
+# summarize new scores
 print('Accuracy (heuristic) \t  \t \t \t \t %.3f%%' % (accuracy_test_pOS_heur*100.0))  
 print('Precision (heuristic) \t \t \t \t \t %.3f%%' % (precision_test_pOS_heur*100.0))
 print('Recall (heuristic) \t \t \t \t \t \t %.3f%%' % (recall_test_pOS_heur*100.0))
