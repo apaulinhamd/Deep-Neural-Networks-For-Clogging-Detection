@@ -25,8 +25,15 @@ from pandas import DataFrame
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-
-# convert series to supervised learning
+from sklearn.metrics import classification_report
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import mean_absolute_error 
+import math 
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import auc
+    
+# function responsible for generating the 4x120 input matrix
 def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
 	n_vars = 1 if type(data) is list else data.shape[1]
 	df = DataFrame(data)
@@ -56,19 +63,19 @@ X = df.values
 X = X.astype('float32')
 del df
 
-# Time Matrix X_4x120
-delay = 120
+# Time Matrix X_4x120 (the first 4 variables of the data set were used.)
+delay = 120 #determines the temporal sample size of each input matrix
 Xt = series_to_supervised(X[:,:4], (delay-1), 1)
 Xt = Xt.values
 
-# output
+# formation of the output variable
 yt = X[(delay-1):,4:]
 
-# features and classes
+# define number of features and classes
 n_features = X[:,:4].shape[1]
 n_classes = 1
 
-# concatenate data
+# concatenate data (input + output)
 X = np.concatenate([Xt,yt],axis=1)
 
 # Separate majority and minority classes
@@ -81,16 +88,21 @@ del X
 # fit and evaluate a model
 def evaluate_model(X_train, y_train, X_valid, y_valid, X_test, y_test):
     
+    # training parameters
     verbose, epochs, batch_size = 1, 200, 1200
+    
+    # from the data collects the number of input variables (i.e., 4) and output size.
     n_features, n_outputs = X_train.shape[2], y_train.shape[1]
     
     # reshape into subsequences (samples, time steps, rows, cols, channels)
-    n_steps, n_length = 4,30
+    n_steps, n_length = 4,30  #selected after analyzing the process for adjusting the model data input (tensor formation)
     
+    # reshape training, validation, and testing sets
     X_train = X_train.reshape((X_train.shape[0], n_steps, 1, n_length, n_features))
     X_valid = X_valid.reshape((X_valid.shape[0], n_steps, 1, n_length, n_features))
     X_test = X_test.reshape((X_test.shape[0], n_steps, 1, n_length, n_features))
     
+    # loss and metrics
     my_loss = tf.keras.losses.CategoricalCrossentropy()
     my_metric1 = tf.keras.metrics.CategoricalAccuracy() 
     my_metric2 = tf.keras.metrics.AUC()
@@ -113,6 +125,7 @@ def evaluate_model(X_train, y_train, X_valid, y_valid, X_test, y_test):
 	# fit network
     callback = tf.keras.callbacks.EarlyStopping(min_delta=0.0005, patience=6)
     
+    # training time calculation
     import time
     start = time.clock() 
     history = model.fit(X_train, y_train, validation_data=(X_valid, y_valid), 
@@ -131,30 +144,20 @@ def evaluate_model(X_train, y_train, X_valid, y_valid, X_test, y_test):
     plt.legend()
     plt.show()
     
-    
+    # predict:
     y_pred = np.zeros(y_test.shape)
     start = time.clock()
     id_pred = model.predict_classes(X_test,verbose=verbose)
     end = time.clock() 
     y_pred[id_pred==1,1]=1
     y_pred[id_pred==0,0]=1
-    time2test = end-start
+    time2test = end-start  #test time calculation
 
     
-    
-    from sklearn.metrics import classification_report
-    from sklearn.metrics import roc_auc_score
-    from sklearn.metrics import confusion_matrix
-    from sklearn.metrics import mean_absolute_error 
-    import math 
-    from sklearn.metrics import precision_recall_curve
-    from sklearn.metrics import auc
-
+    # analysis of the results by calculating the confusion matrix and defined performance criteria.
     target_names = ['Non-Clogging', 'Clogging']
     print(classification_report(y_test[:,0], y_pred[:,0], target_names=target_names))
-        
     AUC_test = roc_auc_score(y_test[:,0], y_pred[:,0])
-    
     tpr, trc, th = precision_recall_curve(y_test[:,0], y_pred[:,0])
     PR_test =  auc(tpr, trc)
     
@@ -167,8 +170,6 @@ def evaluate_model(X_train, y_train, X_valid, y_valid, X_test, y_test):
     f1_test = 2*tp/(2*tp + fp + fn)
     MCC_test = ((tp*tn)-(fp*fn))/(math.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn)))
     mae_test = mean_absolute_error(y_test[:,0], y_pred[:,0])
-
-
     epochs_test = len(history.history['loss'])
     
     return id_pred, time2test, time2train, model, y_pred, AUC_test, accuracy_test, precision_test, recall_test, f1_test, MCC_test, mae_test, PR_test, epochs_test
@@ -187,7 +188,11 @@ def summarize_results(auc, accuracy, precision, recall, f1, MCC, mae, PR, time2t
     print('Time to Train \t \t \t \t \t \t %.3f (+/-%.3f)' % (mean(time2train), std(time2train)))
     print('Epochs \t \t \t \t \t \t %.3f (+/-%.3f)' % (mean(epochs), std(epochs)))
     
+    
+# defines the number of times the network will be retrained/tested (a kind of k-fold, with k=5)    
 repeats = 5
+
+
 AUC_ = list()
 accuracy_ = list()
 precision_ = list()
@@ -282,8 +287,7 @@ for r in range(repeats):
     X_train = norm_zscore.fit_transform(X_train)
     X_valid = norm_zscore.transform(X_valid)
     X_test = norm_zscore.transform(X_test)
-    
-    
+        
     X_train = X_train.reshape(X_train.shape[0], delay, n_features)
     X_valid = X_valid.reshape(X_valid.shape[0], delay, n_features)
     X_test = X_test.reshape(X_test.shape[0], delay, n_features)
@@ -313,7 +317,6 @@ model.summary()
 summarize_results(AUC_, accuracy_, precision_, Recall_, f1_, MCC_, mae_, PR_,time2train_,epochs_)
 
 
-from sklearn.metrics import confusion_matrix
 tn, fp, fn, tp = confusion_matrix(y_test[:,0], y_pred[:,0]).ravel()
 
 fa = 100*fp/(tn+fp)
