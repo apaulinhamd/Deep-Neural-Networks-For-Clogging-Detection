@@ -229,7 +229,7 @@ for r in range(repeats):
     # mixes normal operation and clogging data
     np.random.shuffle(X_train)
     
-    # TRAINING DATA SET: defines input and output of training dataset
+    # TRAINING DATASET: defines input and output of training dataset
     y_train = X_train[:,delay*n_features:]
     X_train = X_train[:,:delay*n_features]
         
