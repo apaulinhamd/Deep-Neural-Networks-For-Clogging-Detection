@@ -317,10 +317,6 @@ model.summary()
 summarize_results(AUC_, accuracy_, precision_, Recall_, f1_, MCC_, mae_, PR_,time2train_,epochs_)
 
 
-tn, fp, fn, tp = confusion_matrix(y_test[:,0], y_pred[:,0]).ravel()
-
-fa = 100*fp/(tn+fp)
-
 
 
 
