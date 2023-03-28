@@ -265,22 +265,41 @@ print('Epochs \t \t \t \t \t \t %.3f' % (epochs_test))
 window = 40
 windowing = list(range(0,len(X_test), window))
 
-limiar = 0.3
-
 y_before_heuristic = y_pred
 y_pOS_heuristic = np.zeros(y_pred.shape)
 
-for i in windowing:
-    if mean(y_before_heuristic[i:i+window,0]) < limiar: #if mean < threshold 
 
-        # If mean < threshold = NORMAL        
-        y_pOS_heuristic[i:i+window,0]=0
-        y_pOS_heuristic[i:i+window,1]=1
-                    
-    else: 
-        # If mean > threshold será CLOGGING)
-        y_pOS_heuristic[i:i+window,0]=1
-        y_pOS_heuristic[i:i+window,1]=0
+threshold_min = 0.3
+threshold_max = 0.85
+
+for i in windowing:
+    if mean(y_before_heuristic[i:i+window ,0]) < threshold_min: 
+    
+        # if mean < threshold min -> NORMAL        
+        y_pOS_heuristic[i:i+window ,0]=0
+        y_pOS_heuristic[i:i+window ,1]=1  
+        
+    else:
+        if mean(y_before_heuristic[i:i+window ,0]) > threshold_max:     
+        
+            # if mean > threshold max -> CLOGGING
+            y_pOS_heuristic[i:i+window ,0]=1
+            y_pOS_heuristic[i:i+window ,1]=0
+            
+        else:
+            if i>0:
+                # if the previous window is NORMAL -> NORMAL
+                if y_pOS_heuristic[i-3,0] == 0:
+                    y_pOS_heuristic[i:i+window ,0]=0
+                    y_pOS_heuristic[i:i+window ,1]=1
+                else:
+                    # if the previous window is CLOGGING -> CLOGGING
+                    y_pOS_heuristic[i:i+window ,0]=1
+                    y_pOS_heuristic[i:i+window ,1]=0
+            else:
+                 # the first is NORMAL (the system always starts with normal operation)
+                 y_pOS_heuristic[i:i+window ,0]=0
+                 y_pOS_heuristic[i:i+window ,1]=1   
         
 
 AUC_test_pOS_heur = roc_auc_score(y_test[:,0], y_pOS_heuristic[:,0])
