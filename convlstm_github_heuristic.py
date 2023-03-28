@@ -262,7 +262,7 @@ print('Epochs \t \t \t \t \t \t %.3f' % (epochs_test))
       
 
 # heuristic
-window = 30
+window = 40
 windowing = list(range(0,len(X_test), window))
 
 limiar = 0.3
