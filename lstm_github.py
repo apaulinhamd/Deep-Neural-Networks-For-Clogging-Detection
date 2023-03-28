@@ -23,9 +23,16 @@ from pandas import concat
 from pandas import DataFrame
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import mean_absolute_error 
+import math 
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import auc
 
 
-# convert series to supervised learning
+# function responsible for generating the 4x120 input matrix
 def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
 	n_vars = 1 if type(data) is list else data.shape[1]
 	df = DataFrame(data)
@@ -55,19 +62,19 @@ X = df.values
 X = X.astype('float32')
 del df
 
-# Time Matrix X_4x120
-delay = 120
+# Time Matrix X_4x120 (the first 4 variables of the data set were used.)
+delay = 120  #determines the temporal sample size of each input matrix
 Xt = series_to_supervised(X[:,:4], (delay-1), 1)
 Xt = Xt.values
 
-# output
+# formation of the output variable
 yt = X[(delay-1):,4:]
 
-# features and classes
+# define number of features and classes
 n_features = X[:,:4].shape[1]
 n_classes = 1
 
-# concatenate data
+# concatenate data (input + output)
 X = np.concatenate([Xt,yt],axis=1)
 
 # Separate majority and minority classes
@@ -79,16 +86,19 @@ del X
 
 # fit and evaluate a model
 def evaluate_model(X_train, y_train, X_valid, y_valid, X_test, y_test):
-    
+    # training parameters
     verbose, epochs, batch_size = 1, 200, 1200
+ 
+    # from the data collects the number of input variables (i.e., 4) and output size.
     n_timesteps, n_features, n_outputs = X_train.shape[1], X_train.shape[2], y_train.shape[1]
     
+    # reshape training, validation, and testing sets
     my_loss = tf.keras.losses.CategoricalCrossentropy()
     my_metric1 = tf.keras.metrics.CategoricalAccuracy() 
     my_metric2 = tf.keras.metrics.AUC()
         
         
-	# define model
+	# loss and metrics
     model = Sequential()
     model.add(LSTM(256, return_sequences=True, input_shape=(n_timesteps,n_features)))
     model.add(LSTM(8))
@@ -105,6 +115,7 @@ def evaluate_model(X_train, y_train, X_valid, y_valid, X_test, y_test):
 	# fit network
     callback = tf.keras.callbacks.EarlyStopping(min_delta=0.0005, patience=6)
     
+    # training time calculation
     import time
     start = time.clock() 
     history = model.fit(X_train, y_train, validation_data=(X_valid, y_valid), 
@@ -123,7 +134,7 @@ def evaluate_model(X_train, y_train, X_valid, y_valid, X_test, y_test):
     plt.legend()
     plt.show()
     
-    
+    # predict:
     y_pred = np.zeros(y_test.shape)
     start = time.clock()
     id_pred = model.predict_classes(X_test,verbose=verbose)
@@ -133,15 +144,7 @@ def evaluate_model(X_train, y_train, X_valid, y_valid, X_test, y_test):
     time2test = end-start
 
     
-    
-    from sklearn.metrics import classification_report
-    from sklearn.metrics import roc_auc_score
-    from sklearn.metrics import confusion_matrix
-    from sklearn.metrics import mean_absolute_error 
-    import math 
-    from sklearn.metrics import precision_recall_curve
-    from sklearn.metrics import auc
-
+    # analysis of the results by calculating the confusion matrix and defined performance criteria.  
     target_names = ['Non-Clogging', 'Clogging']
     print(classification_report(y_test[:,0], y_pred[:,0], target_names=target_names))
         
@@ -179,7 +182,11 @@ def summarize_results(auc, accuracy, precision, recall, f1, MCC, mae, PR, time2t
     print('Time to Train \t \t \t \t \t \t %.3f (+/-%.3f)' % (mean(time2train), std(time2train)))
     print('Epochs \t \t \t \t \t \t %.3f (+/-%.3f)' % (mean(epochs), std(epochs)))
     
+
+# defines the number of times the network will be retrained/tested (a kind of k-fold, with k=5)        
 repeats = 5
+
+
 AUC_ = list()
 accuracy_ = list()
 precision_ = list()
@@ -194,8 +201,9 @@ epochs_ = list()
 
 for r in range(repeats):
     
-        
+    
     # selects 80% of data matrices for training set
+    # necessary to split for each class of data in order to keep the proportion of the training data set at 50% for each class (data balancing)
     X_tr_0, X_tst_0, y_tr_0, y_tst_0 = train_test_split(X_majority,X_majority[:,0],
                                                         test_size=0.2,  random_state = 59418*r, shuffle=True) # 59418: this number was used as a multiplier of "r" to generate our seed.
     del y_tr_0, y_tst_0 
@@ -205,28 +213,30 @@ for r in range(repeats):
     del y_tr_1, y_tst_1 
     
      
-    # Upsample minority class: To keep the training set data balanced
+    # Undersampling majoritory class: To keep the training set data balanced
     X_tr_0 = resample(X_tr_0,
                  replace=False,     # sample without replacement
                  n_samples=X_tr_1.shape[0],       # to match minority class
                  random_state=594178*r) # reproducible results
     
+    # concatenate the input dataset
     X_train = np.concatenate([X_tr_0, X_tr_1])
+    
+    # mixes normal operation and clogging data
     np.random.shuffle(X_train)
     
-    # TRAINING DATA SET
+    # TRAINING DATASET: defines input and output of training dataset
     y_train = X_train[:,delay*n_features:]
     X_train = X_train[:,:delay*n_features]
         
     
-    # Total samples for tst and validation will be: N_tst_val
+    # Total samples for test and validation will be: N_tst_val (corresponding to 80% of the total training set data)
     N_tr = X_train.shape[0]
     N_tst_val = int(N_tr*100/80 - N_tr)
     
     
     # KEEP VALIDATION AND TEST SET IN THE ORIGINAL PROPORTION
-    
-    # resample of validation and test sets
+    # resample of validation and test sets (maintaining the original proportion of the distribution of classes (unbalanced set))
     X_tst_0 = resample(X_tst_0,
                  replace=False,    
                  n_samples=int(N_tst_val*0.93), 
@@ -238,6 +248,7 @@ for r in range(repeats):
                  random_state=594178*r)
     
     
+    # half of this set will revert to testing and the other half to validation. This division is made for each class.
     X_tst_0, X_val_0, y_tst_0, y_val_0 = train_test_split(X_tst_0,X_tst_0[:,0],
                                                         test_size=0.5, random_state = 59418*r, shuffle=True)
     del y_tst_0, y_val_0
@@ -247,13 +258,15 @@ for r in range(repeats):
     del y_tst_1, y_val_1 
     
     
-    
+    # concatenate the validation and test dataset
     X_valid = np.concatenate([X_val_0, X_val_1])
     X_test = np.concatenate([X_tst_0, X_tst_1])    
     
+    # mixes normal operation and clogging data
     np.random.shuffle(X_valid)
     np.random.shuffle(X_test)
     
+    # defines input and output of validation and test datasets
     y_valid = X_valid[:,delay*n_features:]
     X_valid = X_valid[:,:delay*n_features]
         
@@ -270,17 +283,16 @@ for r in range(repeats):
     # Z-SCORE
     
     norm_zscore = StandardScaler()
-    
     X_train = norm_zscore.fit_transform(X_train)
     X_valid = norm_zscore.transform(X_valid)
     X_test = norm_zscore.transform(X_test)
     
-    
+    # adjustment of the initial formation of the input matrices 
     X_train = X_train.reshape(X_train.shape[0], delay, n_features)
     X_valid = X_valid.reshape(X_valid.shape[0], delay, n_features)
     X_test = X_test.reshape(X_test.shape[0], delay, n_features)
     
-    
+    # calls the function responsible for training, validating and testing the neural network  
     id_pred, time2test, time2train, model, y_pred, AUC_test, accuracy_test, precision_test, recall_test, f1_test, MCC_test, mae_test, PR_test, epochs_test = evaluate_model(X_train, y_train, X_valid, y_valid, X_test, y_test)       
     
     
@@ -304,11 +316,6 @@ for r in range(repeats):
 model.summary()
 summarize_results(AUC_, accuracy_, precision_, Recall_, f1_, MCC_, mae_, PR_,time2train_,epochs_)
 
-
-from sklearn.metrics import confusion_matrix
-tn, fp, fn, tp = confusion_matrix(y_test[:,0], y_pred[:,0]).ravel()
-
-fa = 100*fp/(tn+fp)
 
 
 
