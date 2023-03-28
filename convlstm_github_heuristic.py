@@ -270,7 +270,7 @@ y_pOS_heuristic = np.zeros(y_pred.shape)
 
 
 threshold_min = 0.3
-threshold_max = 0.85
+threshold_max = 0.8
 
 for i in windowing:
     if mean(y_before_heuristic[i:i+window ,0]) < threshold_min: 
