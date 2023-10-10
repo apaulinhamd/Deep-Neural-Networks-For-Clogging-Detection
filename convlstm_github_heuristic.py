@@ -305,7 +305,7 @@ for i in windowing:
         else:
             if i>0:
                 # if the previous window is NORMAL -> NORMAL
-                if y_pOS_heuristic[i-3,0] == 0:
+                if y_pOS_heuristic[i-1,0] == 0:
                     y_pOS_heuristic[i:i+window ,0]=0
                     y_pOS_heuristic[i:i+window ,1]=1
                 else:
