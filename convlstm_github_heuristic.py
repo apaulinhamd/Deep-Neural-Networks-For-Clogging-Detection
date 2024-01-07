@@ -85,80 +85,46 @@ X_minority = X[yt[:,0]==1]
 del X
 
 # selects 80% of data matrices for training set
-# necessary to split for each class of data in order to keep the proportion of the training data set at 50% for each class (data balancing)
-X_tr_0, X_tst_0, y_tr_0, y_tst_0 = train_test_split(X_majority,X_majority[:,0],
-                                                    test_size=0.2,  random_state = 59418, shuffle=True) # 59418: this number was used as a multiplier of "r" to generate our seed.
-del y_tr_0, y_tst_0 
+split_index_0 = int(len(X_majority) * 0.8)
+split_index_1 = int(len(X_minority) * 0.8)
 
-X_tr_1, X_tst_1, y_tr_1, y_tst_1 = train_test_split(X_minority,X_minority[:,0],
-                                                    test_size=0.2, random_state = 59418, shuffle=True)
-del y_tr_1, y_tst_1 
+X_tr_0, X_tst_0 = X_majority[:split_index_0], X_majority[split_index_0:]
+X_tr_1, X_tst_1 = X_minority[:split_index_1], X_minority[split_index_1:]
 
- 
-# Undersampling majoritory class: To keep the training set data balanced
-X_tr_0 = resample(X_tr_0,
-             replace=False,     # sample without replacement
-             n_samples=X_tr_1.shape[0],       # to match minority class
-             random_state=594178) # reproducible results
+# Undersampling majority class: To keep the training set data balanced
+X_tr_0 = X_tr_0[:len(X_tr_1)]
 
 # concatenate the input dataset
 X_train = np.concatenate([X_tr_0, X_tr_1])
 
-# mixes normal operation and clogging data
-np.random.shuffle(X_train)
-
 # TRAINING DATASET: defines input and output of training dataset
-y_train = X_train[:,delay*n_features:]
-X_train = X_train[:,:delay*n_features]
-    
+y_train = X_train[:, delay * n_features:]
+X_train = X_train[:, :delay * n_features]
 
 # Total samples for test and validation will be: N_tst_val (corresponding to 80% of the total training set data)
 N_tr = X_train.shape[0]
-N_tst_val = int(N_tr*100/80 - N_tr)
-
+N_tst_val = int(N_tr * 100 / 80 - N_tr)
 
 # KEEP VALIDATION AND TEST SET IN THE ORIGINAL PROPORTION
-# resample of validation and test sets (maintaining the original proportion of the distribution of classes (unbalanced set))
-X_tst_0 = resample(X_tst_0,
-             replace=False,    
-             n_samples=int(N_tst_val*0.93), 
-             random_state=594178)
+X_tst_0 = X_tst_0[:int(N_tst_val * 0.93)]
+X_tst_1 = X_tst_1[:int(N_tst_val * 0.07)]
 
-X_tst_1 = resample(X_tst_1,
-             replace=False,    
-             n_samples=int(N_tst_val*0.07), 
-             random_state=594178)
+split_index_tst_0 = len(X_tst_0) // 2
+split_index_tst_1 = len(X_tst_1) // 2
 
-# half of this set will revert to testing and the other half to validation. This division is made for each class.
-X_tst_0, X_val_0, y_tst_0, y_val_0 = train_test_split(X_tst_0,X_tst_0[:,0],
-                                                    test_size=0.5, random_state = 59418, shuffle=True)
-del y_tst_0, y_val_0
-
-X_tst_1, X_val_1, y_tst_1, y_val_1 = train_test_split(X_tst_1,X_tst_1[:,0],
-                                                    test_size=0.5, random_state = 59418, shuffle=True)
-del y_tst_1, y_val_1 
-
+X_val_0, X_tst_0 = X_tst_0[:split_index_tst_0], X_tst_0[split_index_tst_0:]
+X_val_1, X_tst_1 = X_tst_1[:split_index_tst_1], X_tst_1[split_index_tst_1:]
 
 # concatenate the validation and test dataset
 X_valid = np.concatenate([X_val_0, X_val_1])
-X_test = np.concatenate([X_tst_0, X_tst_1])    
-
-# mixes normal operation and clogging data
-np.random.shuffle(X_valid)
-np.random.shuffle(X_test)
+X_test = np.concatenate([X_tst_0, X_tst_1])
 
 # defines input and output of validation and test datasets
-y_valid = X_valid[:,delay*n_features:]
-X_valid = X_valid[:,:delay*n_features]
-    
-y_test = X_test[:,delay*n_features:]
-X_test = X_test[:,:delay*n_features]
-    
-        
-del X_tr_1, X_tst_1
-del X_tr_0, X_tst_0
-del X_val_0, X_val_1
-    
+y_valid = X_valid[:, delay * n_features:]
+X_valid = X_valid[:, :delay * n_features]
+
+y_test = X_test[:, delay * n_features:]
+X_test = X_test[:, :delay * n_features]
 
 # Z-SCORE
 norm_zscore = StandardScaler()
@@ -166,7 +132,7 @@ X_train = norm_zscore.fit_transform(X_train)
 X_valid = norm_zscore.transform(X_valid)
 X_test = norm_zscore.transform(X_test)
 
-# adjustment of the initial formation of the input matrices 
+# adjustment of the initial formation of the input matrices
 X_train = X_train.reshape(X_train.shape[0], delay, n_features)
 X_valid = X_valid.reshape(X_valid.shape[0], delay, n_features)
 X_test = X_test.reshape(X_test.shape[0], delay, n_features)
@@ -276,47 +242,117 @@ print('Time to Train \t \t \t \t \t \t %.3f' % (time2train))
 print('Epochs \t \t \t \t \t \t %.3f' % (epochs_test))
       
 
-# heuristic
-window = 40 # sets the size of the evaluation window
-windowing = list(range(0,len(X_test), window)) #
-
-y_before_heuristic = y_pred
-y_pOS_heuristic = np.zeros(y_pred.shape)
-
-
-#s et the max and min limit values
-threshold_min = 0.3
-threshold_max = 0.8
-
-for i in windowing:
-    if mean(y_before_heuristic[i:i+window ,0]) < threshold_min: 
+def heuristic(janela, limiar_min, limiar_max, y_before_heuristic):  
     
-        # if mean < threshold min -> NORMAL        
-        y_pOS_heuristic[i:i+window ,0]=0
-        y_pOS_heuristic[i:i+window ,1]=1  
+    y_pOS_heuristica = np.zeros(y_before_heuristic.shape)
+    janelamento = list(range(0,y_before_heuristic.shape[0]-janela, 1)) 
+    op1, op2, op3, op4, op5, op6, op7, op8 = 0, 0, 0, 0, 0, 0, 0, 0
+    
+    # FUTURO y_pOS_heuristica[i,0] - preencho em t=0 com base em 0 a 40
+    for i in janelamento:
+        Clg = y_before_heuristic[i:i+janela,0]
+        Clg_index = np.where(Clg == 1)[0]
         
-    else:
-        if mean(y_before_heuristic[i:i+window ,0]) > threshold_max:     
-        
-            # if mean > threshold max -> CLOGGING
-            y_pOS_heuristic[i:i+window ,0]=1
-            y_pOS_heuristic[i:i+window ,1]=0
-            
-        else:
-            if i>0:
-                # if the previous window is NORMAL -> NORMAL
-                if y_pOS_heuristic[i-1,0] == 0:
-                    y_pOS_heuristic[i:i+window ,0]=0
-                    y_pOS_heuristic[i:i+window ,1]=1
+        if i>janela:
+            # conta o total de amostras consecutivas = 1 no inicio da janela ATUAL
+            j1=0
+            while Clg.any():
+                if j1<len(Clg):
+                    if Clg[j1]==1:
+                        j1 += 1
+                    else:
+                        break
                 else:
-                    # if the previous window is CLOGGING -> CLOGGING
-                    y_pOS_heuristic[i:i+window ,0]=1
-                    y_pOS_heuristic[i:i+window ,1]=0
-            else:
-                 # the first is NORMAL (the system always starts with normal operation)
-                 y_pOS_heuristic[i:i+window ,0]=0
-                 y_pOS_heuristic[i:i+window ,1]=1   
+                    break       
         
+            # conta o total de amostras consecutivas = 1 no final da janela ANTERIOR   
+            Clg_anterior = y_pOS_heuristica[i-janela:i,0]
+            
+            jj=len(Clg_anterior)-1 
+            
+            while Clg_anterior.any():
+               if jj != 0:
+                   if Clg_anterior[jj]==1:
+                       jj -= 1
+                   else:
+                       break
+               else:
+                   break   
+            j2 = (len(Clg_anterior)-1)-jj
+            j = j2+j1
+                               
+            # media < limiar_min
+            if mean(Clg) <= limiar_min: # COMO 0.3 = 13.5 
+                       
+                # se a amostra atual for clogging 
+                # E a janela anterior for toda clogging - CLOGGING
+                if y_before_heuristic[i,0]==1 and j >= 45:
+                    y_pOS_heuristica[i,0] = 1
+                    y_pOS_heuristica[i,1] = 0
+                    op1+=1
+                    
+                # caso contrário, será NORMAL
+                else: 
+                    y_pOS_heuristica[i,0] = 0
+                    y_pOS_heuristica[i,1] = 1
+                    op2+=1
+            
+            else:
+                # se media > lim_max    
+                if mean(Clg) >= limiar_max: # COM 0.8 = 36
+                        y_pOS_heuristica[i,0] = 1
+                        y_pOS_heuristica[i,1] = 0   
+                        op3+=1
+                
+                # se media > lim_min ou media < lim_max
+                else:            
+                    # se tiver amostra 1 na extremidade do inicio - CLOGGING
+                    if Clg_index[0] == 0:
+                        
+                        # Se a qnt de amostras somadas (janela atual e anterior) é >= 45 (é indicativo de q ainda existe CLOGGING, então não altero essas variáveis)
+                        if j >= 45:
+                            y_pOS_heuristica[i,0] = 1
+                            y_pOS_heuristica[i,1] = 0
+                            op4+=1
+
+                        # Se a qnt de amostras somadas é < 45 (é indicativo de op. NORMAL)
+                        else:
+                            y_pOS_heuristica[i,0] = 0
+                            y_pOS_heuristica[i,1] = 1
+                            op5+=1
+                    
+                    # se amostra da extremidade for igual a 0            
+                    else:
+                        # Se janela anterior for completamente clogging (as 40 amostras) - CLOGGING
+                        if j2 == janela-1:
+                            y_pOS_heuristica[i,0] = 1
+                            y_pOS_heuristica[i,1] = 0
+                            op6+=1
+                        
+                        # Se for normal > AVALIA AMOSTRA POR AMOSTRA
+                        else:  
+                            y_pOS_heuristica[i,0] = 0
+                            y_pOS_heuristica[i,1] = 1
+                            op7+=1
+
+
+        else:
+             y_pOS_heuristica[i,0] = 0
+             y_pOS_heuristica[i,1] = 1 
+             op8+=1             
+                          
+        
+    return y_pOS_heuristica
+
+
+
+# defines the heuristic parameters:
+window = 45
+thr_min = 0.3
+thr_max = 0.8
+
+y_pOS_heuristic = heuristic(window, thr_min, thr_max, y_pred)
+       
 
 # analysis of the results calculated by the confusion matrix after applying the heuristic
 AUC_test_pOS_heur = roc_auc_score(y_test[:,0], y_pOS_heuristic[:,0])
@@ -340,5 +376,3 @@ print('MAE (heuristic) \t %.3f%%' % (mae_test_pOS_heur))
 print('AUC (ROC) (heuristic) \t \t \t \t \t %.3f' % (AUC_test_pOS_heur))
 
     
-
-
