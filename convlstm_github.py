@@ -203,43 +203,57 @@ PR_ = list()
 time2train_ = list()
 epochs_ = list()
 
+# Calcula o tamanho dos conjuntos
+N_tr = 324634 # 80% das amostras
+N_tr_maj = int(0.5 * N_tr) # 50% das amostras = normal
+N_tr_min = int(0.5 * N_tr) # 50% das amostras = clogging
+
+N_val = 40579 # 10% das amostras
+N_val_maj = int(0.9334 * N_val) # 93,34% das amostras = normal
+N_val_min = int(0.0666 * N_val) # 6,66% das amostras = clogging
+
+N_tst = 40579 # 10% das amostras
+N_tst_maj = int(0.9334 * N_tst) # 93,34% das amostras = normal
+N_tst_min = int(0.0666 * N_tst) # 6,66% das amostras = clogging
+
+# Índice de início para cada fold
+start_idx = 0
 
 for r in range(repeats):
     
-    # selects 80% of data matrices for training set
-    split_index_0 = int(len(X_majority) * 0.8)
-    split_index_1 = int(len(X_minority) * 0.8)
+    # Amostras de treinamento
+    end_train_maj = start_idx + N_tr_maj
+    end_train_min = start_idx + N_tr_min
+    X_tr_0 = X_majority[start_idx:end_train_maj]
+    X_tr_1 = X_minority[start_idx:end_train_min]
 
-    X_tr_0, X_tst_0 = X_majority[:split_index_0], X_majority[split_index_0:]
-    X_tr_1, X_tst_1 = X_minority[:split_index_1], X_minority[split_index_1:]
+    # Amostras de validação
+    start_val = end_train_maj + 1
+    end_val_maj = start_val + N_val_maj
+    end_val_min = start_val + N_val_min
+    X_val_0 = X_majority[start_val:end_val_maj]
+    X_val_1 = X_minority[start_val:end_val_min]
 
-    # Undersampling majority class: To keep the training set data balanced
-    X_tr_0 = X_tr_0[:len(X_tr_1)]
+    # Amostras de teste
+    start_test = end_val_maj + 1
+    end_test_maj = start_test + N_tst_maj
+    end_test_min = start_test + N_tst_min
+    X_tst_0 = X_majority[start_test:end_test_maj]
+    X_tst_1 = X_minority[start_test:end_test_min]
 
+    # Atualiza o índice de início para o próximo fold
+    start_idx = end_test_maj + 1
+    
     # concatenate the input dataset
     X_train = np.concatenate([X_tr_0, X_tr_1])
     
     # TRAINING DATASET: defines input and output of training dataset
     y_train = X_train[:, delay * n_features:]
     X_train = X_train[:, :delay * n_features]
-
-    # Total samples for test and validation will be: N_tst_val (corresponding to 80% of the total training set data)
-    N_tr = X_train.shape[0]
-    N_tst_val = int(N_tr * 100 / 80 - N_tr)
-
-    # KEEP VALIDATION AND TEST SET IN THE ORIGINAL PROPORTION
-    X_tst_0 = X_tst_0[:int(N_tst_val * 0.93)]
-    X_tst_1 = X_tst_1[:int(N_tst_val * 0.07)]
-
-    split_index_tst_0 = len(X_tst_0) // 2
-    split_index_tst_1 = len(X_tst_1) // 2
-
-    X_val_0, X_tst_0 = X_tst_0[:split_index_tst_0], X_tst_0[split_index_tst_0:]
-    X_val_1, X_tst_1 = X_tst_1[:split_index_tst_1], X_tst_1[split_index_tst_1:]
-
+    
     # concatenate the validation and test dataset
     X_valid = np.concatenate([X_val_0, X_val_1])
-    X_test = np.concatenate([X_tst_0, X_tst_1])
+    X_test = np.concatenate([X_tst_0, X_tst_1])   
 
     # defines input and output of validation and test datasets
     y_valid = X_valid[:, delay * n_features:]
@@ -248,6 +262,10 @@ for r in range(repeats):
     y_test = X_test[:, delay * n_features:]
     X_test = X_test[:, :delay * n_features]
 
+    del X_tr_1, X_tst_1
+    del X_tr_0, X_tst_0
+    del X_val_0, X_val_1
+	
     # Z-SCORE
     norm_zscore = StandardScaler()
     X_train = norm_zscore.fit_transform(X_train)
