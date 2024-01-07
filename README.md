@@ -48,9 +48,6 @@ To demonstrate the superior generalization capacity of ConvLSTM models compared 
 
 # Post-processing heuristic:
 
-After training the networks, a type of post-processing heuristic was also tested in order to reduce false positive and false negative classification rates. Based on the training data, it was found that clogging occurrences can last from 45 seconds up to 45 minutes, depending on the control action performed by the operator, steel type, and other process conditions. Using this information, the model's response was evaluated in 40-second windows, i.e., blocks containing 40 matrices each.
-In each window, the number of samples classified as clogging was calculated relative to the total window size, called ClgMed. If the clogging occurrence is below the 30% threshold (LimMin), the system will classify this window as normal operation. On the other hand, if the clogging occurrence is above the 80% threshold (LimMax), the system will automatically classify the window as clogging.
-
-For cases where the window presents a clogging occurrence between the minimum and maximum limits, the algorithm evaluates the classification of the previous window. If the previously classified window is labeled as clogging, the current window will also be labeled as obstruction. Otherwise, the window will be classified as normal operation.
+After training the networks, a type of post-processing heuristic was also tested in order to reduce false positive and false negative classification rates. Based on the training data, it was found that clogging occurrences can last from 45 seconds up to 45 minutes, depending on the control action performed by the operator, steel type, and other process conditions. Using this information, the model's response was evaluated in 45-second windows
 
 This procedure is in the convlstm_github_heuristica.py code.
