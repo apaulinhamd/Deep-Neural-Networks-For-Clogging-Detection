@@ -9,7 +9,7 @@ Data preprocessing to handle noise, outliers, and missing samples is not within 
 It is important to highlight that, due to data confidentiality, we do not have authorization to disclose the database used in this project.
 
 
-UPDATE: In the "Final Code" Folder: there are the Jupyter Results obtained by ConvLSTM with the application of Post-Processing Heuristics
+UPDATE: In the "Final Code" folder: are the Jupyter Results obtained by ConvLSTM with the application of updated Post-Processing Heuristics.
 
 
 # Project Objective:
