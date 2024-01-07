@@ -63,99 +63,67 @@ def traintest_convlstm(X, r, delay, n_features, ftr_ly_01, ftr_ly_02, krn_ly_01,
 
 def split_datasets(r, X, delay, n_features):
     
-    yt = X[:,delay*n_features:]
-    
+    yt = X[:, delay * n_features:]
+
     # Separate majority and minority classes (to find out the imbalance)
-    X_majority = X[yt[:,0]==0]
-    X_minority = X[yt[:,0]==1]
-    
+    X_majority = X[yt[:, 0] == 0]
+    X_minority = X[yt[:, 0] == 1]
+
     del X
-          
+
     # selects 80% of data matrices for training set
-    # necessary to split for each class of data in order to keep the proportion of the training data set at 50% for each class (data balancing)
-    X_tr_0, X_tst_0, y_tr_0, y_tst_0 = train_test_split(X_majority,X_majority[:,0],
-                                                        test_size=0.2,  random_state = 59418*r, shuffle=True) # 59418: this number was used as a multiplier of "r" to generate our seed.
-    del y_tr_0, y_tst_0 
-    
-    X_tr_1, X_tst_1, y_tr_1, y_tst_1 = train_test_split(X_minority,X_minority[:,0],
-                                                        test_size=0.2, random_state = 59418*r, shuffle=True)
-    del y_tr_1, y_tst_1 
-    
-     
-    # Undersampling majoritory class: To keep the training set data balanced
-    X_tr_0 = resample(X_tr_0,
-                 replace=False,     # sample without replacement
-                 n_samples=X_tr_1.shape[0],       # to match minority class
-                 random_state=594178*r) # reproducible results
-    
+    split_index_0 = int(len(X_majority) * 0.8)
+    split_index_1 = int(len(X_minority) * 0.8)
+
+    X_tr_0, X_tst_0 = X_majority[:split_index_0], X_majority[split_index_0:]
+    X_tr_1, X_tst_1 = X_minority[:split_index_1], X_minority[split_index_1:]
+
+    # Undersampling majority class: To keep the training set data balanced
+    X_tr_0 = X_tr_0[:len(X_tr_1)]
+
     # concatenate the input dataset
     X_train = np.concatenate([X_tr_0, X_tr_1])
-    # mixes normal operation and clogging data
-    np.random.shuffle(X_train)
-    
+
     # TRAINING DATASET: defines input and output of training dataset
-    y_train = X_train[:,delay*n_features:]
-    X_train = X_train[:,:delay*n_features]
-        
-    
+    y_train = X_train[:, delay * n_features:]
+    X_train = X_train[:, :delay * n_features]
+
     # Total samples for test and validation will be: N_tst_val (corresponding to 80% of the total training set data)
     N_tr = X_train.shape[0]
-    N_tst_val = int(N_tr*100/80 - N_tr)
-    
-    
+    N_tst_val = int(N_tr * 100 / 80 - N_tr)
+
     # KEEP VALIDATION AND TEST SET IN THE ORIGINAL PROPORTION
-    # resample of validation and test sets (maintaining the original proportion of the distribution of classes (unbalanced set))
-    X_tst_0 = resample(X_tst_0,
-                 replace=False,    
-                 n_samples=int(N_tst_val*0.93), # 93% das amostras são NORMAL = 0
-                 random_state=594178*r)
-    
-    X_tst_1 = resample(X_tst_1,
-                 replace=False,    
-                 n_samples=int(N_tst_val*0.07), # 7% das amostras são CLOGGING = 1
-                 random_state=594178*r)
-    
-    # half of this set will revert to testing and the other half to validation. This division is made for each class.
-    X_tst_0, X_val_0, y_tst_0, y_val_0 = train_test_split(X_tst_0,X_tst_0[:,0],
-                                                        test_size=0.5, random_state = 59418*r, shuffle=True)
-    del y_tst_0, y_val_0
-    
-    X_tst_1, X_val_1, y_tst_1, y_val_1 = train_test_split(X_tst_1,X_tst_1[:,0],
-                                                        test_size=0.5, random_state = 59418*r, shuffle=True)
-    del y_tst_1, y_val_1 
-    
-    
+    X_tst_0 = X_tst_0[:int(N_tst_val * 0.93)]
+    X_tst_1 = X_tst_1[:int(N_tst_val * 0.07)]
+
+    split_index_tst_0 = len(X_tst_0) // 2
+    split_index_tst_1 = len(X_tst_1) // 2
+
+    X_val_0, X_tst_0 = X_tst_0[:split_index_tst_0], X_tst_0[split_index_tst_0:]
+    X_val_1, X_tst_1 = X_tst_1[:split_index_tst_1], X_tst_1[split_index_tst_1:]
+
     # concatenate the validation and test dataset
     X_valid = np.concatenate([X_val_0, X_val_1])
-    X_test = np.concatenate([X_tst_0, X_tst_1])    
-    
-    # mixes normal operation and clogging data
-    np.random.shuffle(X_valid)
-    np.random.shuffle(X_test)
-    
+    X_test = np.concatenate([X_tst_0, X_tst_1])
+
     # defines input and output of validation and test datasets
-    y_valid = X_valid[:,delay*n_features:]
-    X_valid = X_valid[:,:delay*n_features]
-        
-    y_test = X_test[:,delay*n_features:]
-    X_test = X_test[:,:delay*n_features]
-            
-    del X_tr_1, X_tst_1
-    del X_tr_0, X_tst_0
-    del X_val_0, X_val_1
-    
+    y_valid = X_valid[:, delay * n_features:]
+    X_valid = X_valid[:, :delay * n_features]
+
+    y_test = X_test[:, delay * n_features:]
+    X_test = X_test[:, :delay * n_features]
+
     # Z-SCORE
     norm_zscore = StandardScaler()
     X_train = norm_zscore.fit_transform(X_train)
     X_valid = norm_zscore.transform(X_valid)
     X_test = norm_zscore.transform(X_test)
-    
-    # adjustment of the initial formation of the input matrices    
+
+    # adjustment of the initial formation of the input matrices
     X_train = X_train.reshape(X_train.shape[0], delay, n_features)
     X_valid = X_valid.reshape(X_valid.shape[0], delay, n_features)
     X_test = X_test.reshape(X_test.shape[0], delay, n_features)
-    
-    
+
     return X_train, y_train, X_valid, y_valid, X_test, y_test
 
 
@@ -163,101 +131,67 @@ def split_dataset(X, delay, n_features):
     # used only for training and testing the last neural network (to be used in the heuristic, selected r=1)
     r = 1 
             
-    yt = X[:,delay*n_features:]
-    
+        yt = X[:, delay * n_features:]
+
     # Separate majority and minority classes (to find out the imbalance)
-    X_majority = X[yt[:,0]==0]
-    X_minority = X[yt[:,0]==1]
-    
+    X_majority = X[yt[:, 0] == 0]
+    X_minority = X[yt[:, 0] == 1]
+
     del X
-          
+
     # selects 80% of data matrices for training set
-    # necessary to split for each class of data in order to keep the proportion of the training data set at 50% for each class (data balancing)
-    X_tr_0, X_tst_0, y_tr_0, y_tst_0 = train_test_split(X_majority,X_majority[:,0],
-                                                        test_size=0.2,  random_state = 59418*r, shuffle=True) # 59418: this number was used as a multiplier of "r" to generate our seed.
-    del y_tr_0, y_tst_0 
-    
-    X_tr_1, X_tst_1, y_tr_1, y_tst_1 = train_test_split(X_minority,X_minority[:,0],
-                                                        test_size=0.2, random_state = 59418*r, shuffle=True)
-    del y_tr_1, y_tst_1 
-    
-     
-    # Undersampling majoritory class: To keep the training set data balanced
-    X_tr_0 = resample(X_tr_0,
-                 replace=False,     # sample without replacement
-                 n_samples=X_tr_1.shape[0],       # to match minority class
-                 random_state=594178*r) # reproducible results
-    
+    split_index_0 = int(len(X_majority) * 0.8)
+    split_index_1 = int(len(X_minority) * 0.8)
+
+    X_tr_0, X_tst_0 = X_majority[:split_index_0], X_majority[split_index_0:]
+    X_tr_1, X_tst_1 = X_minority[:split_index_1], X_minority[split_index_1:]
+
+    # Undersampling majority class: To keep the training set data balanced
+    X_tr_0 = X_tr_0[:len(X_tr_1)]
+
     # concatenate the input dataset
     X_train = np.concatenate([X_tr_0, X_tr_1])
-    # mixes normal operation and clogging data
-    np.random.shuffle(X_train)
-    
+
     # TRAINING DATASET: defines input and output of training dataset
-    y_train = X_train[:,delay*n_features:]
-    X_train = X_train[:,:delay*n_features]
-        
-    
+    y_train = X_train[:, delay * n_features:]
+    X_train = X_train[:, :delay * n_features]
+
     # Total samples for test and validation will be: N_tst_val (corresponding to 80% of the total training set data)
     N_tr = X_train.shape[0]
-    N_tst_val = int(N_tr*100/80 - N_tr)
-    
-    
+    N_tst_val = int(N_tr * 100 / 80 - N_tr)
+
     # KEEP VALIDATION AND TEST SET IN THE ORIGINAL PROPORTION
-    # resample of validation and test sets (maintaining the original proportion of the distribution of classes (unbalanced set))
-    X_tst_0 = resample(X_tst_0,
-                 replace=False,    
-                 n_samples=int(N_tst_val*0.93), 
-                 random_state=594178*r)
-    
-    X_tst_1 = resample(X_tst_1,
-                 replace=False,    
-                 n_samples=int(N_tst_val*0.07), 
-                 random_state=594178*r)
-    
-    # half of this set will revert to testing and the other half to validation. This division is made for each class.
-    X_tst_0, X_val_0, y_tst_0, y_val_0 = train_test_split(X_tst_0,X_tst_0[:,0],
-                                                        test_size=0.5, random_state = 59418*r, shuffle=True)
-    del y_tst_0, y_val_0
-    
-    X_tst_1, X_val_1, y_tst_1, y_val_1 = train_test_split(X_tst_1,X_tst_1[:,0],
-                                                        test_size=0.5, random_state = 59418*r, shuffle=True)
-    del y_tst_1, y_val_1 
-    
-    
+    X_tst_0 = X_tst_0[:int(N_tst_val * 0.93)]
+    X_tst_1 = X_tst_1[:int(N_tst_val * 0.07)]
+
+    split_index_tst_0 = len(X_tst_0) // 2
+    split_index_tst_1 = len(X_tst_1) // 2
+
+    X_val_0, X_tst_0 = X_tst_0[:split_index_tst_0], X_tst_0[split_index_tst_0:]
+    X_val_1, X_tst_1 = X_tst_1[:split_index_tst_1], X_tst_1[split_index_tst_1:]
+
     # concatenate the validation and test dataset
     X_valid = np.concatenate([X_val_0, X_val_1])
-    X_test = np.concatenate([X_tst_0, X_tst_1])    
-    
-    # mixes normal operation and clogging data
-    np.random.shuffle(X_valid)
-    np.random.shuffle(X_test)
-    
-    
+    X_test = np.concatenate([X_tst_0, X_tst_1])
+
     # defines input and output of validation and test datasets
-    y_valid = X_valid[:,delay*n_features:]
-    X_valid = X_valid[:,:delay*n_features]
-        
-    y_test = X_test[:,delay*n_features:]
-    X_test = X_test[:,:delay*n_features]
-            
-    del X_tr_1, X_tst_1
-    del X_tr_0, X_tst_0
-    del X_val_0, X_val_1
-    
-    
+    y_valid = X_valid[:, delay * n_features:]
+    X_valid = X_valid[:, :delay * n_features]
+
+    y_test = X_test[:, delay * n_features:]
+    X_test = X_test[:, :delay * n_features]
+
     # Z-SCORE
     norm_zscore = StandardScaler()
     X_train = norm_zscore.fit_transform(X_train)
     X_valid = norm_zscore.transform(X_valid)
     X_test = norm_zscore.transform(X_test)
-    
-    # adjustment of the initial formation of the input matrices    
+
+    # adjustment of the initial formation of the input matrices
     X_train = X_train.reshape(X_train.shape[0], delay, n_features)
     X_valid = X_valid.reshape(X_valid.shape[0], delay, n_features)
     X_test = X_test.reshape(X_test.shape[0], delay, n_features)
-    
-    
+
     return X_train, y_train, X_valid, y_valid, X_test, y_test
 
 
