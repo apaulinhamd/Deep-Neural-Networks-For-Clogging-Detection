@@ -195,85 +195,70 @@ time2train_ = list()
 epochs_ = list()
 
 
+# Calcula o tamanho dos conjuntos
+N_tr = 324634 # 80% das amostras
+N_tr_maj = int(0.5 * N_tr) # 50% das amostras = normal
+N_tr_min = int(0.5 * N_tr) # 50% das amostras = clogging
+
+N_val = 40579 # 10% das amostras
+N_val_maj = int(0.9334 * N_val) # 93,34% das amostras = normal
+N_val_min = int(0.0666 * N_val) # 6,66% das amostras = clogging
+
+N_tst = 40579 # 10% das amostras
+N_tst_maj = int(0.9334 * N_tst) # 93,34% das amostras = normal
+N_tst_min = int(0.0666 * N_tst) # 6,66% das amostras = clogging
+
+# Índice de início para cada fold
+start_idx = 0
+
 for r in range(repeats):
+
+    # Amostras de treinamento
+    end_train_maj = start_idx + N_tr_maj
+    end_train_min = start_idx + N_tr_min
+    X_tr_0 = X_majority[start_idx:end_train_maj]
+    X_tr_1 = X_minority[start_idx:end_train_min]
+
+    # Amostras de validação
+    start_val = end_train_maj + 1
+    end_val_maj = start_val + N_val_maj
+    end_val_min = start_val + N_val_min
+    X_val_0 = X_majority[start_val:end_val_maj]
+    X_val_1 = X_minority[start_val:end_val_min]
+
+    # Amostras de teste
+    start_test = end_val_maj + 1
+    end_test_maj = start_test + N_tst_maj
+    end_test_min = start_test + N_tst_min
+    X_tst_0 = X_majority[start_test:end_test_maj]
+    X_tst_1 = X_minority[start_test:end_test_min]
+
+    # Atualiza o índice de início para o próximo fold
+    start_idx = end_test_maj + 1
     
-        
-    # selects 80% of data matrices for training set
-    X_tr_0, X_tst_0, y_tr_0, y_tst_0 = train_test_split(X_majority,X_majority[:,0],
-                                                        test_size=0.2,  random_state = 59418*r, shuffle=True) # 59418: this number was used as a multiplier of "r" to generate our seed.
-    del y_tr_0, y_tst_0 
-    
-    X_tr_1, X_tst_1, y_tr_1, y_tst_1 = train_test_split(X_minority,X_minority[:,0],
-                                                        test_size=0.2, random_state = 59418*r, shuffle=True)
-    del y_tr_1, y_tst_1 
-    
-     
-    # Upsample minority class: To keep the training set data balanced
-    X_tr_0 = resample(X_tr_0,
-                 replace=False,     # sample without replacement
-                 n_samples=X_tr_1.shape[0],       # to match minority class
-                 random_state=594178*r) # reproducible results
-    
+    # concatenate the input dataset
     X_train = np.concatenate([X_tr_0, X_tr_1])
-    np.random.shuffle(X_train)
     
-    # TRAINING DATA SET
-    y_train = X_train[:,delay*n_features:]
-    X_train = X_train[:,:delay*n_features]
-        
+    # TRAINING DATASET: defines input and output of training dataset
+    y_train = X_train[:, delay * n_features:]
+    X_train = X_train[:, :delay * n_features]
     
-    # Total samples for tst and validation will be: N_tst_val
-    N_tr = X_train.shape[0]
-    N_tst_val = int(N_tr*100/80 - N_tr)
-    
-    
-    # KEEP VALIDATION AND TEST SET IN THE ORIGINAL PROPORTION
-    
-    # resample of validation and test sets
-    X_tst_0 = resample(X_tst_0,
-                 replace=False,    
-                 n_samples=int(N_tst_val*0.93), 
-                 random_state=594178*r)
-    
-    X_tst_1 = resample(X_tst_1,
-                 replace=False,    
-                 n_samples=int(N_tst_val*0.07), 
-                 random_state=594178*r)
-    
-    
-    X_tst_0, X_val_0, y_tst_0, y_val_0 = train_test_split(X_tst_0,X_tst_0[:,0],
-                                                        test_size=0.5, random_state = 59418*r, shuffle=True)
-    del y_tst_0, y_val_0
-    
-    X_tst_1, X_val_1, y_tst_1, y_val_1 = train_test_split(X_tst_1,X_tst_1[:,0],
-                                                        test_size=0.5, random_state = 59418*r, shuffle=True)
-    del y_tst_1, y_val_1 
-    
-    
-    
+    # concatenate the validation and test dataset
     X_valid = np.concatenate([X_val_0, X_val_1])
-    X_test = np.concatenate([X_tst_0, X_tst_1])    
-    
-    np.random.shuffle(X_valid)
-    np.random.shuffle(X_test)
-    
-    y_valid = X_valid[:,delay*n_features:]
-    X_valid = X_valid[:,:delay*n_features]
-        
-    y_test = X_test[:,delay*n_features:]
-    X_test = X_test[:,:delay*n_features]
-        
-        
-    # to promote a neural network with bias training
-    #X_train = np.concatenate([X_train,X_test], axis=0)   
-    #y_train = np.concatenate([y_train,y_test], axis=0)     
-        
-        
+    X_test = np.concatenate([X_tst_0, X_tst_1])   
+
+    # defines input and output of validation and test datasets
+    y_valid = X_valid[:, delay * n_features:]
+    X_valid = X_valid[:, :delay * n_features]
+
+    y_test = X_test[:, delay * n_features:]
+    X_test = X_test[:, :delay * n_features]
+
     del X_tr_1, X_tst_1
     del X_tr_0, X_tst_0
-    del X_val_0, X_val_1
+    del X_val_0, X_val_1	
         
-    
+        
     # Z-SCORE
     
     norm_zscore = StandardScaler()
