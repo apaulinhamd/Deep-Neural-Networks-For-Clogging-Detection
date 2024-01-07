@@ -9,8 +9,7 @@ Data preprocessing to handle noise, outliers, and missing samples is not within 
 It is important to highlight that, due to data confidentiality, we do not have authorization to disclose the database used in this project.
 
 
-UPDATE: In the "Final Code" folder: are the Jupyter Results obtained by ConvLSTM with the application of updated Post-Processing Heuristics.
-
+UPDATE: The "run2.ipnb" file presents the Jupyter Results obtained by ConvLSTM with the application of updated Post-Processing Heuristics.
 
 # Project Objective:
 The objective of this project is to compare the overall performance of classifiers using LSTM (lstm_github.py) and its variant, ConvLSTM (convlstm_github.py). Additionally, it evaluates the performance of a hybrid approach, which combines CNN1D with LSTM, called CNN-LSTM (cnnlstm_github.py). To evaluate the efficiency of the proposed models, MLP models (mlp_github.py) were used as a baseline for comparison.
