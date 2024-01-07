@@ -386,3 +386,4 @@ def heuristic(y_before_heuristic, X_test_heuristica):
              y_pOS_heuristica[i,1] = 1 
              op8+=1             
 
+    return y_pOS_heuristic
