@@ -97,10 +97,7 @@ def split_datasets(r, X, delay, n_features):
     end_test_min = start_test + N_tst_min
     X_tst_0 = X_majority[start_test:end_test_maj]
     X_tst_1 = X_minority[start_test:end_test_min]
-
-    # Atualiza o índice de início para o próximo fold
-    start_idx = end_test_maj + 1
-    
+   
     # concatenate the input dataset
     X_train = np.concatenate([X_tr_0, X_tr_1])
     
