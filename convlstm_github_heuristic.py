@@ -83,7 +83,7 @@ X_majority = X[yt[:,0]==0]
 X_minority = X[yt[:,0]==1]
 
 del X
-
+start_idx = 0
 
 # Calcula o tamanho dos conjuntos
 N_tr = 324634 # 80% das amostras
