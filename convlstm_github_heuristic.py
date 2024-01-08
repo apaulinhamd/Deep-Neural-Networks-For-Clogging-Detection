@@ -264,58 +264,129 @@ print('Epochs \t \t \t \t \t \t %.3f' % (epochs_test))
       
 
 # heuristic
-window = 40 # sets the size of the evaluation window
-windowing = list(range(0,len(X_test), window)) #
+#window = 40 # sets the size of the evaluation window
+#windowing = list(range(0,len(X_test), window)) #
 
-y_before_heuristic = y_pred
-y_pOS_heuristic = np.zeros(y_pred.shape)
+#y_before_heuristic = y_pred
+#y_pOS_heuristic = np.zeros(y_pred.shape)
 
 
-#s et the max and min limit values
-threshold_min = 0.3
-threshold_max = 0.8
+#max and min limit values
+#threshold_min = 0.3
+#threshold_max = 0.8
 
-for i in windowing:
-    if mean(y_before_heuristic[i:i+window ,0]) < threshold_min: 
+# defines the window value (janela), min threshold (limiar_min) and maximum threshold (limiar_max)
+janela, limiar_min, limiar_max = 45, 0.3, 0.8
+
+y_pOS_heuristica = np.zeros(y_before_heuristic.shape)
+janelamento = list(range(0,y_before_heuristic.shape[0]-janela, 1)) 
+op1, op2, op3, op4, op5, op6, op7, op8 = 0, 0, 0, 0, 0, 0, 0, 0
+
+# FUTURO y_pOS_heuristica[i,0] - preencho em t=0 com base em 0 a 40
+for i in janelamento:
+Clg = y_before_heuristic[i:i+janela,0]
+Clg_index = np.where(Clg == 1)[0]
+
+if i>janela:
+    # conta o total de amostras consecutivas = 1 no inicio da janela ATUAL
+    j1=0
+    while Clg.any():
+	if j1<len(Clg):
+	    if Clg[j1]==1:
+		j1 += 1
+	    else:
+		break
+	else:
+	    break       
+
+    # conta o total de amostras consecutivas = 1 no final da janela ANTERIOR   
+    Clg_anterior = y_pOS_heuristica[i-janela:i,0]
     
-        # if mean < threshold min -> NORMAL        
-        y_pOS_heuristic[i:i+window ,0]=0
-        y_pOS_heuristic[i:i+window ,1]=1  
-        
+    jj=len(Clg_anterior)-1 
+    
+    while Clg_anterior.any():
+       if jj != 0:
+	   if Clg_anterior[jj]==1:
+	       jj -= 1
+	   else:
+	       break
+       else:
+	   break   
+    j2 = (len(Clg_anterior)-1)-jj
+    j = j2+j1
+		       
+    # media < limiar_min
+    if mean(Clg) <= limiar_min: # COMO 0.3 = 13.5 
+	       
+	# se a amostra atual for clogging 
+	# E a janela anterior for toda clogging - CLOGGING
+	if y_before_heuristic[i,0]==1 and j >= 45:
+	    y_pOS_heuristica[i,0] = 1
+	    y_pOS_heuristica[i,1] = 0
+	    op1+=1
+	    
+	# caso contrário, será NORMAL
+	else: 
+	    y_pOS_heuristica[i,0] = 0
+	    y_pOS_heuristica[i,1] = 1
+	    op2+=1
+    
     else:
-        if mean(y_before_heuristic[i:i+window ,0]) > threshold_max:     
-        
-            # if mean > threshold max -> CLOGGING
-            y_pOS_heuristic[i:i+window ,0]=1
-            y_pOS_heuristic[i:i+window ,1]=0
-            
-        else:
-            if i>0:
-                # if the previous window is NORMAL -> NORMAL
-                if y_pOS_heuristic[i-1,0] == 0:
-                    y_pOS_heuristic[i:i+window ,0]=0
-                    y_pOS_heuristic[i:i+window ,1]=1
-                else:
-                    # if the previous window is CLOGGING -> CLOGGING
-                    y_pOS_heuristic[i:i+window ,0]=1
-                    y_pOS_heuristic[i:i+window ,1]=0
-            else:
-                 # the first is NORMAL (the system always starts with normal operation)
-                 y_pOS_heuristic[i:i+window ,0]=0
-                 y_pOS_heuristic[i:i+window ,1]=1   
+	# se media > lim_max    
+	if mean(Clg) >= limiar_max: # COM 0.8 = 36
+		y_pOS_heuristica[i,0] = 1
+		y_pOS_heuristica[i,1] = 0   
+		op3+=1
+	
+	# se media > lim_min ou media < lim_max
+	else:            
+	    # se tiver amostra 1 na extremidade do inicio - CLOGGING
+	    if Clg_index[0] == 0:
+		
+		# Se a qnt de amostras somadas (janela atual e anterior) é >= 45 (é indicativo de q ainda existe CLOGGING, então não altero essas variáveis)
+		if j >= 45:
+		    y_pOS_heuristica[i,0] = 1
+		    y_pOS_heuristica[i,1] = 0
+		    op4+=1
+
+		# Se a qnt de amostras somadas é < 45 (é indicativo de op. NORMAL)
+		else:
+		    y_pOS_heuristica[i,0] = 0
+		    y_pOS_heuristica[i,1] = 1
+		    op5+=1
+	    
+	    # se amostra da extremidade for igual a 0            
+	    else:
+		# Se janela anterior for completamente clogging (as 40 amostras) - CLOGGING
+		if j2 == janela-1:
+		    y_pOS_heuristica[i,0] = 1
+		    y_pOS_heuristica[i,1] = 0
+		    op6+=1
+		
+		# Se for normal > AVALIA AMOSTRA POR AMOSTRA
+		else:  
+		    y_pOS_heuristica[i,0] = 0
+		    y_pOS_heuristica[i,1] = 1
+		    op7+=1
+
+
+else:
+     y_pOS_heuristica[i,0] = 0
+     y_pOS_heuristica[i,1] = 1 
+     op8+=1         
         
 
 # analysis of the results calculated by the confusion matrix after applying the heuristic
-AUC_test_pOS_heur = roc_auc_score(y_test[:,0], y_pOS_heuristic[:,0])
+AUC_test_pOS_heur = roc_auc_score(y_test[:,0], y_pOS_heuristica[:,0])
 
-tn_pOS, fp_pOS, fn_pOS, tp_pOS = confusion_matrix(y_test[:,0], y_pOS_heuristic[:,0]).ravel()
+tn_pOS, fp_pOS, fn_pOS, tp_pOS = confusion_matrix(y_test[:,0], y_pOS_heuristica[:,0]).ravel()
 accuracy_test_pOS_heur = (tp_pOS + tn_pOS)/(tp_pOS + tn_pOS + fp_pOS + fn_pOS)
 precision_test_pOS_heur = tp_pOS/(tp_pOS + fp_pOS)
 recall_test_pOS_heur = tp_pOS/(tp_pOS + fn_pOS)
 f1_test_pOS_heur = 2*tp_pOS/(2*tp_pOS + fp_pOS + fn_pOS)
 MCC_test_pOS_heur = ((tp_pOS*tn_pOS)-(fp_pOS*fn_pOS))/(math.sqrt((tp_pOS+fp_pOS)*(tp_pOS+fn_pOS)*(tn_pOS+fp_pOS)*(tn_pOS+fn_pOS)))
 
-mae_test_pOS_heur = mean_absolute_error(y_test[:,0], y_pOS_heuristic[:,0])
+mae_test_pOS_heur = mean_absolute_error(y_test[:,0], y_pOS_heuristica[:,0])
 
 # summarize new scores
 print('Accuracy (heuristic) \t  \t \t \t \t %.3f%%' % (accuracy_test_pOS_heur*100.0))  
