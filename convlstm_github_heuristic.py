@@ -357,7 +357,7 @@ if i>janela:
 	    
 	    # se amostra da extremidade for igual a 0            
 	    else:
-		# Se janela anterior for completamente clogging (as 40 amostras) - CLOGGING
+		# Se janela anterior for completamente clogging (as 45 amostras) - CLOGGING
 		if j2 == janela-1:
 		    y_pOS_heuristica[i,0] = 1
 		    y_pOS_heuristica[i,1] = 0
