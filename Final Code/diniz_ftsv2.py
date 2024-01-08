@@ -135,10 +135,7 @@ def split_datasets(r, X, delay, n_features):
     return X_train, y_train, X_valid, y_valid, X_test, y_test
 
 
-def split_dataset(X, delay, n_features):
-    # used only for training and testing the last neural network (to be used in the heuristic, selected r=1)
-    r = 1 
-            
+def split_dataset(X, delay, n_features):           
     # Calcula o tamanho dos conjuntos
     N_tr = 324634 # 80% das amostras
     N_tr_maj = int(0.5 * N_tr) # 50% das amostras = normal
@@ -151,8 +148,6 @@ def split_dataset(X, delay, n_features):
     N_tst = 40579 # 10% das amostras
     N_tst_maj = int(0.9334 * N_tst) # 93,34% das amostras = normal
     N_tst_min = int(0.0666 * N_tst) # 6,66% das amostras = clogging
-
-    start_idx = r * (N_tr + N_val + N_tst)
 
     # Amostras de treinamento
     end_train_maj = start_idx + N_tr_maj
