@@ -185,8 +185,8 @@ def split_dataset(X, delay, n_features):
     # concatenate the validation and test dataset
     X_valid = np.concatenate([X_val_0, X_val_1])
     X_test = np.concatenate([X_tst_0, X_tst_1])   
-    np.random.shuffle(X_valid)
-    np.random.shuffle(X_test)
+    #np.random.shuffle(X_valid)
+    #np.random.shuffle(X_test)
 	
 
     # defines input and output of validation and test datasets
