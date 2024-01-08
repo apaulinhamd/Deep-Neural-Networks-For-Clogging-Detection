@@ -306,7 +306,7 @@ def summarize_results_point(accuracy, precision, recall, f1, MCC):
 def heuristic(y_before_heuristic, X_test_heuristica):
     
     # defines the window value (janela), min threshold (limiar_min) and maximum threshold (limiar_max)
-    janela, limiar_min, limiar_max = 40, 0.3, 0.8
+    janela, limiar_min, limiar_max = 45, 0.3, 0.8
     
     y_pOS_heuristica = np.zeros(y_before_heuristic.shape)
     janelamento = list(range(0,y_before_heuristic.shape[0]-janela, 1)) 
@@ -387,7 +387,7 @@ def heuristic(y_before_heuristic, X_test_heuristica):
                     
                     # se amostra da extremidade for igual a 0            
                     else:
-                        # Se janela anterior for completamente clogging (as 40 amostras) - CLOGGING
+                        # Se janela anterior for completamente clogging (as 45 amostras) - CLOGGING
                         if j2 == janela-1:
                             y_pOS_heuristica[i,0] = 1
                             y_pOS_heuristica[i,1] = 0
