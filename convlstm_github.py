@@ -242,7 +242,7 @@ for r in range(repeats):
     X_tst_1 = X_minority[start_test:end_test_min]
 
     # Atualiza o índice de início para o próximo fold
-    start_idx = end_test_maj + 1
+    start_idx = (r+1) * (N_tst_maj + N_val_maj + N_tr_maj + 3)
     
     # concatenate the input dataset
     X_train = np.concatenate([X_tr_0, X_tr_1])
