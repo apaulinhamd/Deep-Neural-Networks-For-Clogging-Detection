@@ -101,7 +101,9 @@ def split_datasets(r, X, delay, n_features):
    
     # concatenate the input dataset
     X_train = np.concatenate([X_tr_0, X_tr_1])
-    
+    np.random.seed((r+1)*2763)
+    np.random.shuffle(X_train)
+
     # TRAINING DATASET: defines input and output of training dataset
     y_train = X_train[:, delay * n_features:]
     X_train = X_train[:, :delay * n_features]
@@ -109,6 +111,8 @@ def split_datasets(r, X, delay, n_features):
     # concatenate the validation and test dataset
     X_valid = np.concatenate([X_val_0, X_val_1])
     X_test = np.concatenate([X_tst_0, X_tst_1])   
+    np.random.shuffle(X_valid)
+    np.random.shuffle(X_test)
 
     # defines input and output of validation and test datasets
     y_valid = X_valid[:, delay * n_features:]
@@ -171,7 +175,9 @@ def split_dataset(X, delay, n_features):
    
     # concatenate the input dataset
     X_train = np.concatenate([X_tr_0, X_tr_1])
-    
+    np.random.seed(2763)
+    np.random.shuffle(X_train)
+
     # TRAINING DATASET: defines input and output of training dataset
     y_train = X_train[:, delay * n_features:]
     X_train = X_train[:, :delay * n_features]
@@ -179,6 +185,9 @@ def split_dataset(X, delay, n_features):
     # concatenate the validation and test dataset
     X_valid = np.concatenate([X_val_0, X_val_1])
     X_test = np.concatenate([X_tst_0, X_tst_1])   
+    np.random.shuffle(X_valid)
+    np.random.shuffle(X_test)
+	
 
     # defines input and output of validation and test datasets
     y_valid = X_valid[:, delay * n_features:]
