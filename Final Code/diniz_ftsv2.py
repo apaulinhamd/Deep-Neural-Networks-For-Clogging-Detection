@@ -76,7 +76,8 @@ def split_datasets(r, X, delay, n_features):
     N_tst_maj = int(0.9334 * N_tst) # 93,34% das amostras = normal
     N_tst_min = int(0.0666 * N_tst) # 6,66% das amostras = clogging
 
-    start_idx = r * (N_tr + N_val + N_tst)
+    #start_idx = r * (N_tr + N_val + N_tst)
+    start_idx = r * (N_tst_maj + N_val_maj + N_tr_maj + 3)
 
     # Amostras de treinamento
     end_train_maj = start_idx + N_tr_maj
