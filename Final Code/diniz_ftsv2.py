@@ -77,8 +77,7 @@ def split_datasets(r, X, delay, n_features):
     N_tst_min = int(0.0666 * N_tst) # 6,66% das amostras = clogging
 
     # Atualiza o índice de início para o próximo fold
-    #start_idx = r * (N_tr + N_val + N_tst)
-    start_idx = (r+1) * (N_tst_maj + N_val_maj + N_tr_maj + 3)
+    start_idx = r * (N_tst_maj + N_val_maj + N_tr_maj + 3)
 
     # Amostras de treinamento
     end_train_maj = start_idx + N_tr_maj
