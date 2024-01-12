@@ -478,3 +478,45 @@ def heuristic(y_before_heuristic, X_test_heuristica):
              op8+=1             
 
     return y_pOS_heuristica
+
+
+def heuristic_old(y_antes_heuristica, X_test_heuristica): #used in the article "Use Of Deep Neural Networks For Clogging Detection In The Submerged Entry Nozzle Of The Continuous Casting"
+    
+    janela, limiar_min, limiar_max = 40, 0.3, 0.8
+           
+    janelamento = list(range(0,len(X_test_heuristica)-janela, 1))
+    
+    y_pOS_heuristica = np.zeros(y_antes_heuristica.shape)
+       
+    for i in janelamento:
+        # media < limiar_min
+        if mean(y_antes_heuristica[i:i+janela,0]) < limiar_min: 
+        
+            # se media < limiar mínimo -> NORMAL        
+            y_pOS_heuristica[i,0]=0
+            y_pOS_heuristica[i,1]=1  
+            
+        else: # media > limiar_max
+            if mean(y_antes_heuristica[i:i+janela,0]) > limiar_max:     
+            
+                # se media > limiar max -> CLOGGING
+                y_pOS_heuristica[i,0]=1
+                y_pOS_heuristica[i,1]=0
+                
+            else: # media > limiar_min e media < limiar_max
+                if i>0:
+                    # se a janela anterior for NORMAL -> NORMAL
+                    if y_pOS_heuristica[i-1,0] == 0:
+                        y_pOS_heuristica[i,0]=0
+                        y_pOS_heuristica[i,1]=1
+                    else:
+                        # se a janela anterior for CLOGGING -> CLOGGING
+                        y_pOS_heuristica[i,0]=1
+                        y_pOS_heuristica[i,1]=0
+                else:
+                     # o primeio é NORMAL (o sistema sempre inicia no normal)  
+                     y_pOS_heuristica[i,0]=0
+                     y_pOS_heuristica[i,1]=1   
+                     
+                     
+    return y_pOS_heuristica
